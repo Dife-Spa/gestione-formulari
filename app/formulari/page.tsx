@@ -4,10 +4,40 @@ import {
   SidebarInset,
   SidebarProvider,
 } from "@/components/ui/sidebar"
+import { columns } from "./columns"
+import { DataTable } from "./data-table"
+import { getFormulari } from "@/lib/formulari-service"
+import { Suspense } from "react"
+import Loading from "./loading"
 
 export const description = "Gestione dei formulari esistenti."
 
-export default function FormulariPage() {
+/**
+ * Server Component for Formulari page with data fetching
+ */
+export default async function FormulariPage({
+  searchParams,
+}: {
+  searchParams: { [key: string]: string | string[] | undefined }
+}) {
+  // Extract search parameters for server-side filtering
+  const params = await searchParams
+  const page = Number(params.page) || 1
+  const search = (params.search as string) || ''
+  const status = (params.status as string) || ''
+  const sortBy = (params.sortBy as string) || 'created_at'
+  const sortOrder = (params.sortOrder as 'asc' | 'desc') || 'desc'
+
+  // Fetch data server-side
+  const formulariData = await getFormulari({
+    page,
+    pageSize: 20,
+    search,
+    status,
+    sortBy,
+    sortOrder,
+  })
+
   return (
     <div className="[--header-height:calc(--spacing(14))]">
       <SidebarProvider className="flex flex-col">
@@ -16,10 +46,23 @@ export default function FormulariPage() {
           <AppSidebar />
           <SidebarInset>
             <div className="flex flex-1 flex-col gap-4 p-4">
-              {/* Formulari content goes here */}
-              <h1 className="text-2xl font-bold">Formulari</h1>
-              <div className="bg-muted/50 min-h-[100vh] flex-1 rounded-xl md:min-h-min">
-                {/* Table or list of formulari will go here */}
+              <div className="flex items-center justify-between">
+                <h1 className="text-2xl font-bold">Formulari</h1>
+                <div className="text-sm text-muted-foreground">
+                  Totale: {formulariData.total} formulari
+                </div>
+              </div>
+              <div className="rounded-xl overflow-hidden">
+                <Suspense fallback={<Loading />}>
+                  <DataTable 
+                    columns={columns} 
+                    data={formulariData.data}
+                    totalItems={formulariData.total}
+                    totalPages={formulariData.totalPages}
+                    currentPage={formulariData.page}
+                    pageSize={formulariData.pageSize}
+                  />
+                </Suspense>
               </div>
             </div>
           </SidebarInset>
