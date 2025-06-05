@@ -27,15 +27,25 @@ export default async function FormulariPage({
   const status = (params.status as string) || ''
   const sortBy = (params.sortBy as string) || 'created_at'
   const sortOrder = (params.sortOrder as 'asc' | 'desc') || 'desc'
-
+  const dateFrom = (params.dateFrom as string) || ''
+  const dateTo = (params.dateTo as string) || ''
+  const documents = (params.documents as string) || ''
+  const pecStatus = (params.pecStatus as string) || ''
+  const searchColumn = (params.searchColumn as string) || '' // Add this line
+  
   // Fetch data server-side
   const formulariData = await getFormulari({
     page,
     pageSize: 20,
     search,
     status,
+    dateFrom,
+    dateTo,
     sortBy,
     sortOrder,
+    documents,
+    pecStatus,
+    searchColumn, // Add this line
   })
 
   return (
@@ -48,9 +58,9 @@ export default async function FormulariPage({
             <div className="flex flex-1 flex-col gap-4 p-4">
               <div className="flex items-center justify-between">
                 <h1 className="text-2xl font-bold">Formulari</h1>
-                <div className="text-sm text-muted-foreground">
+                {/* <div className="text-sm text-muted-foreground">
                   Totale: {formulariData.total} formulari
-                </div>
+                </div> */}
               </div>
               <div className="rounded-xl overflow-hidden">
                 <Suspense fallback={<Loading />}>
