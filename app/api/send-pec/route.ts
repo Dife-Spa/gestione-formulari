@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
 		}
 
 		// Forward the request to the external API server
-		const externalApiUrl = 'http://192.168.1.172:8022/api/send-pec';
+		const externalApiUrl = 'http://192.168.1.41:8022/api/send-pec';
 		
 		console.log('Proxying PEC request to:', externalApiUrl);
 		console.log('Request body:', body);

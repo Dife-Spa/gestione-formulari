@@ -29,21 +29,21 @@ import {
   ChevronsLeft,
   ChevronsRight,
 } from "lucide-react";
+import { toast } from "sonner";
 
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-  DropdownMenuLabel,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import {
   Popover,
@@ -67,6 +67,9 @@ import { FormularioUI } from "@/types/database.types";
 import { DocumentsFilter } from "@/components/formulari/documents-filter";
 // Add import for PecFilter
 import { PecFilter } from "@/components/formulari/pec-filter";
+// Add import for InvioPecDialog
+import { DeletionDialog } from "@/components/formulari/deletion-dialog";
+import { InvioPecDialog } from "@/components/formulari/invio-pec-dialog";
 
 /**
  * Interface for the DateRange type
@@ -104,9 +107,18 @@ export function DataTable<TData, TValue>({
   const searchParams = useSearchParams();
 
   // Add state for the drawer
+  // Add state for the drawer
   const [selectedFormulario, setSelectedFormulario] =
     React.useState<FormularioUI | null>(null);
   const [drawerOpen, setDrawerOpen] = React.useState(false);
+
+  // Add state for delete confirmation dialog
+  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
+  const [formulariToDelete, setFormulariToDelete] = React.useState<FormularioUI[]>([]);
+
+  // Add state for PEC dialog
+  const [invioPecDialogOpen, setInvioPecDialogOpen] = React.useState(false);
+  const [formularioToSend, setFormularioToSend] = React.useState<FormularioUI[]>([]);
 
   // Function to handle formulario selection
   const handleFormularioSelect = (formulario: FormularioUI) => {
@@ -328,159 +340,151 @@ export function DataTable<TData, TValue>({
     router.push(`?${createQueryString(params)}`);
   };
 
+    // Function to handle delete confirmation
+  const handleDeleteConfirmation = () => {
+    const selectedFormulari = Object.keys(rowSelection).map(
+      (index) => data[parseInt(index)] as FormularioUI
+    );
+    setFormulariToDelete(selectedFormulari);
+    setDeleteDialogOpen(true);
+  };
+
+  // Function to handle successful deletion
+  const handleDeleteSuccess = () => {
+    // Clear row selection
+    setRowSelection({});
+    // Clear formulari to delete
+    setFormulariToDelete([]);
+    // Refresh the data table
+    handleRefreshData();
+  };
+
+  // Add success handler for PEC sending
+const handleSendPecSuccess = () => {
+  setInvioPecDialogOpen(false);
+  setFormularioToSend([]);
+  handleRefreshData();
+};
+
+  // Function to execute the actual deletion
+  const executeDelete = async () => {
+    try {
+      const selectedUIDs = formulariToDelete.map(formulario => formulario.uid);
+      
+      // Call the API to delete the selected formularios
+      const response = await fetch("/api/delete-formulario", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          uids: selectedUIDs,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      console.log(
+        `${selectedUIDs.length} formularios eliminati con successo`
+      );
+
+      // Clear row selection
+      setRowSelection({});
+      
+      // Close dialog
+      setDeleteDialogOpen(false);
+      setFormulariToDelete([]);
+
+      // Refresh the data table
+      handleRefreshData();
+
+      // Show success toast notification
+      toast.success(`${selectedUIDs.length} formularios eliminati con successo`);
+    } catch (error) {
+      console.error("Error deleting formularios:", error);
+      // Show error toast notification
+      toast.error("Errore durante l'eliminazione dei formularios");
+    }
+  };
+
+
   return (
     // Remove TooltipProvider wrapper
     <div className="w-full">
-      <div className="flex items-center py-4 gap-2">
-        <div className="relative max-w-xs">
-          <div className="relative">
-            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Ricerca nella tabella"
-              value={searchValue}
-              onChange={(event) => setSearchValue(event.target.value)}
-              className="pl-8 pr-10 w-[300px]"
+      <div className="flex items-center py-4">
+        <div className="flex gap-3">
+          <Input
+            placeholder="Cerca formulari..."
+            value={searchValue}
+            onChange={(event) => setSearchValue(event.target.value)}
+            className="max-w-sm"
+          />
+          {/* Filter section */}
+          <div className="flex items-center gap-2 pb-4">
+            <DateRangePicker
+              dateRange={dateRange}
+              onDateRangeChange={handleDateRangeChange}
+              onClearDateRange={handleClearDateRange}
             />
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-0 top-0 h-full px-2 py-1"
-                >
-                  <ChevronDown className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-[200px]">
-                <DropdownMenuLabel>Cerca in</DropdownMenuLabel>
-                <DropdownMenuRadioGroup
-                  value={searchColumn}
-                  onValueChange={handleSearchColumnChange}
-                >
-                  <DropdownMenuRadioItem value="">
-                    Tutti i campi
-                  </DropdownMenuRadioItem>
-                  <DropdownMenuRadioItem value="numeroFir">
-                    N° formulario
-                  </DropdownMenuRadioItem>
-                  <DropdownMenuRadioItem value="produttore">
-                    Produttore
-                  </DropdownMenuRadioItem>
-                  <DropdownMenuRadioItem value="trasportatore">
-                    Trasportatore
-                  </DropdownMenuRadioItem>
-                  <DropdownMenuRadioItem value="destinatario">
-                    Destinatario
-                  </DropdownMenuRadioItem>
-                  <DropdownMenuRadioItem value="intermediario">
-                    Intermediario
-                  </DropdownMenuRadioItem>
-                </DropdownMenuRadioGroup>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <DocumentsFilter
+              selectedDocuments={selectedDocuments}
+              onChange={handleDocumentsChange}
+            />
+            <PecFilter
+              selectedPecStatus={selectedPecStatus}
+              onChange={handlePecStatusChange}
+            />
           </div>
         </div>
-        <DateRangePicker
-          dateRange={dateRange}
-          onDateRangeChange={handleDateRangeChange}
-          onClearDateRange={handleClearDateRange}
-        />
-
-        <DocumentsFilter
-          selectedDocuments={selectedDocuments}
-          onChange={handleDocumentsChange}
-        />
-        <PecFilter
-          selectedPecStatus={selectedPecStatus}
-          onChange={handlePecStatusChange}
-        />
-
-        {Object.keys(rowSelection).length > 0 ? (
-          <div className="flex items-center gap-2 ml-auto">
-            <Button
-              variant="destructive"
-              onClick={async () => {
-                try {
-                  // Get selected row indices
-                  const selectedRowIndices = Object.keys(rowSelection);
-
-                  // Get UIDs from selected rows
-                  const selectedUIDs = selectedRowIndices
-                    .map((index) => {
-                      const rowIndex = parseInt(index);
-                      const formulario = data[rowIndex] as FormularioUI;
-                      return formulario.uid;
-                    })
-                    .filter((uid) => uid); // Filter out any undefined values
-
-                  if (selectedUIDs.length === 0) {
-                    console.error("No valid UIDs found for selected rows");
-                    return;
-                  }
-
-                  // Make the API call to delete the formularios
-                  const response = await fetch("/api/delete-formulario", {
-                    method: "POST",
-                    headers: {
-                      "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({
-                      uid_array: selectedUIDs,
-                    }),
-                  });
-
-                  if (!response.ok) {
-                    throw new Error(
-                      `API call failed with status: ${response.status}`
-                    );
-                  }
-
-                  console.log(
-                    `Successfully deleted ${selectedUIDs.length} formularios`
-                  );
-
-                  // Clear row selection
-                  setRowSelection({});
-
-                  // Refresh the data table
-                  handleRefreshData();
-
-                  // Optional: Show a success toast notification
-                  // toast.success(`${selectedUIDs.length} formularios eliminati con successo`);
-                } catch (error) {
-                  console.error("Error deleting formularios:", error);
-                  // Optional: Show an error toast notification
-                  // toast.error("Errore durante l'eliminazione dei formularios");
+        <div className="ml-auto flex gap-2">
+          {/* PEC button - only visible when exactly one row is selected */}
+          {Object.keys(rowSelection).length === 1 && (
+            <Button 
+              variant="outline"
+              onClick={() => {
+                // Get the selected formulario
+                const selectedIndex = parseInt(Object.keys(rowSelection)[0]);
+                const selectedFormulario = data[selectedIndex] as FormularioUI;
+                
+                if (selectedFormulario) {
+                  setFormularioToSend([selectedFormulario]);
+                  setInvioPecDialogOpen(true);
                 }
               }}
+            >
+              <Mail className="h-4 w-4" />
+              Invia PEC
+            </Button>
+          )}
+          
+          {/* Delete button - only visible when rows are selected */}
+          {Object.keys(rowSelection).length > 0 && (
+            <Button
+              variant="outline"
+              onClick={handleDeleteConfirmation}
             >
               <Trash2 className="h-4 w-4" />
               Elimina
             </Button>
-            {/* <Button 
-							variant="outline" 
-							onClick={() => {
-								// Handle PEC action
-								console.log('Send PEC for selected rows', rowSelection);
-							}}
-						>
-							<Mail className="h-4 w-4" />
-							Invia PEC
-						</Button> */}
-          </div>
-        ) : (
-          <div className="ml-auto">
-            <Button
-              onClick={() => {
-                router.push("/formulari/aggiungi");
-              }}
-            >
-              <Plus className="h-4 w-4" />
-              Nuovo formulario
-            </Button>
-          </div>
-        )}
+          )}
+          
+          {/* Nuovo formulario button - always visible */}
+          <Button
+            onClick={() => {
+              router.push("/formulari/aggiungi");
+            }}
+          >
+            <Plus className="h-4 w-4" />
+            Nuovo formulario
+          </Button>
+        </div>
+
       </div>
+      
+      
+      
       <div className="rounded-md border h-[calc(100vh-350px)] overflow-auto">
         <Table>
           <TableHeader className="sticky top-0 bg-background z-10">
@@ -616,7 +620,23 @@ export function DataTable<TData, TValue>({
         </div>
       </div>
 
-      {/* Add the FormularioDetails drawer */}
+      {/* Delete Confirmation Dialog */}
+      <DeletionDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        formulariToDelete={formulariToDelete}
+        onDeleteSuccess={handleDeleteSuccess}
+      />
+
+      {/* PEC Sending Dialog */}
+      <InvioPecDialog
+        open={invioPecDialogOpen}
+        onOpenChange={setInvioPecDialogOpen}
+        formulariToSend={formularioToSend}
+        onSendSuccess={handleSendPecSuccess}
+      />
+      
+      {/* Existing FormularioDetails drawer */}
       <FormularioDetails
         formulario={selectedFormulario}
         open={drawerOpen}
@@ -624,7 +644,6 @@ export function DataTable<TData, TValue>({
         onRefresh={handleRefreshData}
       />
     </div>
-    // Remove closing TooltipProvider tag
   );
 }
 
@@ -699,3 +718,6 @@ function DateRangePicker({
     </div>
   );
 }
+
+
+

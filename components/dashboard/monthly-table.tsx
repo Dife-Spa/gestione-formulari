@@ -5,6 +5,7 @@ import { format, startOfMonth, endOfMonth } from "date-fns";
 import { it } from "date-fns/locale";
 import { ChevronDown, FileX } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { FormularioUI } from "@/types/database.types";
 import {
   Table,
   TableBody,
@@ -20,6 +21,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { FormularioDetails } from "@/components/formulari/formulario-details";
 
 type MonthlyFormulario = {
   id: number;
@@ -30,6 +32,7 @@ type MonthlyFormulario = {
   produttore: string | null;
   destinatario: string | null;
   stato: string;
+  uid?: string;
 };
 
 /**
@@ -42,6 +45,8 @@ export function MonthlyTable() {
   );
   const [isLoadingMonthly, setIsLoadingMonthly] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedFormulario, setSelectedFormulario] = useState<FormularioUI | null>(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   useEffect(() => {
     fetchMonthlyFormulari();
@@ -63,7 +68,7 @@ export function MonthlyTable() {
       const { data, error } = await supabase
         .from("formulari")
         .select(
-          "id, numeroFir, data_movimento, produttore, destinatario, data_emissione, risultati_invio_pec, id_appuntamento"
+          "id, numeroFir, data_movimento, produttore, destinatario, data_emissione, risultati_invio_pec, id_appuntamento, uid"
         )
         .gte("data_movimento", firstDayOfMonth)
         .lte("data_movimento", lastDayOfMonth)
@@ -90,6 +95,7 @@ export function MonthlyTable() {
           produttore: item.produttore || "N/A",
           destinatario: item.destinatario || "N/A",
           stato,
+          uid: item.uid,
         };
       });
 
@@ -103,6 +109,63 @@ export function MonthlyTable() {
   }
 
   const formattedMonth = format(selectedMonth, "MMMM yyyy", { locale: it });
+
+  /**
+   * Handles click on a formulario number to open the details drawer
+   */
+  /**
+   * Handles click on a formulario number to open the details drawer
+   */
+  const handleFormularioClick = async (formulario: MonthlyFormulario) => {
+    try {
+      // Fetch complete formulario data from Supabase
+      const { data, error } = await supabase
+        .from('formulari')
+        .select('*')
+        .eq('id', formulario.id)
+        .single();
+
+      if (error) {
+        console.error('Error fetching formulario details:', error);
+        return;
+      }
+
+      if (data) {
+        // Create a complete FormularioUI object with all the data
+        const formularioForDetails: FormularioUI = {
+          id: data.id.toString(),
+          uid: data.uid || '',
+          codice: data.numeroFir || '',
+          data: data.data_movimento || '',
+          produttore: data.produttore || '',
+          destinatario: data.destinatario || '',
+          trasportatore: data.trasportatore || '',
+          intermediario: data.intermediario,
+          quantita: data.quantita || 0,
+          stato: data.stato as "in_attesa" | "approvato" | "rifiutato" | "completato",
+          id_appuntamento: data.id_appuntamento,
+          dati_formulario: data.dati_formulario,
+          dati_invio_pec: data.dati_invio_pec,
+          dati_appuntamento: data.dati_appuntamento,
+          unita_locale_produttore: data.unita_locale_produttore,
+          unita_locale_destinatario: data.unita_locale_destinatario,
+          file_paths: data.file_paths,
+        };
+        
+        setSelectedFormulario(formularioForDetails);
+        setIsDrawerOpen(true);
+      }
+    } catch (error) {
+      console.error('Error fetching formulario details:', error);
+    }
+  };
+
+  /**
+   * Refreshes the formulari data after changes in the drawer
+   */
+  const handleRefresh = () => {
+    fetchMonthlyFormulari();
+  };
 
   return (
     <div className="bg-card rounded-xl border shadow-sm p-6 flex flex-col h-[calc(100vh-24rem)]">
@@ -187,7 +250,13 @@ export function MonthlyTable() {
               monthlyFormulari.map((formulario) => (
                 <TableRow key={formulario.id}>
                   <TableCell className="font-medium">
-                    {formulario.numeroFir}
+                    <button 
+                      onClick={() => handleFormularioClick(formulario)}
+                      className="text-foreground hover:underline focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-sm"
+                      aria-label={`View details for formulario ${formulario.numeroFir}`}
+                    >
+                      {formulario.numeroFir}
+                    </button>
                   </TableCell>
                   <TableCell>{formulario.id_appuntamento || "N/A"}</TableCell>
                   <TableCell>
@@ -212,6 +281,14 @@ export function MonthlyTable() {
           </TableBody>
         </Table>
       </div>
+
+      {/* FormularioDetails drawer */}
+      <FormularioDetails
+        formulario={selectedFormulario as any}
+        open={isDrawerOpen}
+        onOpenChange={setIsDrawerOpen}
+        onRefresh={handleRefresh}
+      />
     </div>
   );
 }

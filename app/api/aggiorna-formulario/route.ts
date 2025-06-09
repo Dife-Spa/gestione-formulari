@@ -20,36 +20,52 @@ export async function POST(request: NextRequest) {
 			);
 		}
 
-		// Create a new FormData object to forward to the external API
-		const externalFormData = new FormData();
-		externalFormData.append('uid', uid.toString());
+		// Create URLSearchParams for form-urlencoded data
+		const params = new URLSearchParams();
+		params.append('uid', uid.toString());
 		
 		// Add the appropriate parameter based on what was provided
 		if (new_fir) {
-			externalFormData.append('new_fir', new_fir.toString());
+			params.append('new_fir', new_fir.toString());
 		}
 		if (new_appuntamento) {
-			externalFormData.append('new_appuntamento', new_appuntamento.toString());
+			params.append('new_appuntamento', new_appuntamento.toString());
 		}
+
+		// Log the exact data being sent
+		console.log('Request data:', {
+			uid: uid?.toString(),
+			new_fir: new_fir?.toString(),
+			new_appuntamento: new_appuntamento?.toString()
+		});
+		console.log('URL-encoded body:', params.toString());
 
 		// Forward the request to the external API server
 		const externalApiUrl = 'http://192.168.1.41:8020/aggiorna';
 		
-		console.log('Proxying formulario update request to:', externalApiUrl, {
-			uid,
-			new_fir,
-			new_appuntamento
-		});
-
 		const response = await fetch(externalApiUrl, {
 			method: 'POST',
-			body: externalFormData,
+			headers: {
+				'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+			},
+			body: params.toString(),
 		});
 
 		if (!response.ok) {
 			console.error('External API error:', response.status, response.statusText);
+			
+			
+			// Try to get more details from the error response
+			let errorDetails;
+			try {
+				errorDetails = await response.text();
+				console.error('External API error details:', errorDetails);
+			} catch (e) {
+				console.error('Could not read error response');
+			}
+			
 			return NextResponse.json(
-				{ error: `External API error: ${response.status} ${response.statusText}` },
+				{ error: `External API error: ${response.status} ${response.statusText}`, details: errorDetails },
 				{ status: response.status }
 			);
 		}

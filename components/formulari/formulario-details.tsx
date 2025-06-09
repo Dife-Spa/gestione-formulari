@@ -49,6 +49,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { DeletionDialog } from "@/components/formulari/deletion-dialog";
+import { InvioPecDialog } from "@/components/formulari/invio-pec-dialog";
 
 interface FormularioDetailsProps {
   formulario: FormularioUI | null;
@@ -127,6 +129,28 @@ export function FormularioDetails({
   const [originalRiceveScontrinoValue, setOriginalRiceveScontrinoValue] =
     React.useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
+  const [formularioToDelete, setFormularioToDelete] = React.useState<FormularioUI[]>([]);
+  const [invioPecDialogOpen, setInvioPecDialogOpen] = React.useState(false);
+  const [formularioToSend, setFormularioToSend] = React.useState<FormularioUI[]>([]);
+  
+  // Add success handler for deletion
+  const handleDeleteSuccess = () => {
+    setDeleteDialogOpen(false);
+    setFormularioToDelete([]);
+    onOpenChange(false);
+    if (onRefresh) {
+      onRefresh();
+    }
+  };
+
+  const handleSendPecSuccess = () => {
+    setInvioPecDialogOpen(false);
+    setFormularioToSend([]);
+    // Optionally close the drawer or refresh data
+    if (onRefresh) {
+      onRefresh();
+    }
+  };
 
   // Add useEffect to update state when formulario changes - MOVED BEFORE CONDITIONAL RETURN
   React.useEffect(() => {
@@ -399,44 +423,10 @@ export function FormularioDetails({
                     ? "Destinatario PEC non specificato"
                     : "Invia PEC"
                 }
-                onClick={async () => {
-                  if (!formulario?.uid) {
-                    console.error("UID del formulario non disponibile");
-                    return;
-                  }
-
-                  try {
-                    // Use relative URL to avoid CORS issues with direct IP address
-                    // Create a proxy endpoint in Next.js API routes if needed
-                    const apiUrl = "/api/send-pec";
-                    console.log("Sending PEC request to:", apiUrl);
-
-                    const response = await fetch(apiUrl, {
-                      method: "POST",
-                      headers: {
-                        "Content-Type": "application/json",
-                      },
-                      body: JSON.stringify({
-                        uid_array: [formulario.uid],
-                      }),
-                    });
-
-                    if (!response.ok) {
-                      throw new Error(`Errore HTTP: ${response.status}`);
-                    }
-
-                    const result = await response.json();
-                    console.log("PEC inviata con successo:", result);
-                    // Show success toast notification
-                    toast.success("PEC inviata con successo");
-                  } catch (error) {
-                    console.error("Errore durante l'invio della PEC:", error);
-                    console.error(
-                      "Dettagli errore:",
-                      error instanceof Error ? error.message : String(error)
-                    );
-                    // Show error toast notification
-                    toast.error("Errore durante l'invio della PEC");
+                onClick={() => {
+                  if (formulario) {
+                    setFormularioToSend([formulario]);
+                    setInvioPecDialogOpen(true);
                   }
                 }}
               >
@@ -446,7 +436,12 @@ export function FormularioDetails({
               <Button
                 variant="destructive"
                 className="gap-2"
-                onClick={() => setDeleteDialogOpen(true)}
+                onClick={() => {
+                  if (formulario) {
+                    setFormularioToDelete([formulario]);
+                    setDeleteDialogOpen(true);
+                  }
+                }}
               >
                 <Trash2 className="h-4 w-4" />
                 Elimina
@@ -1100,94 +1095,21 @@ export function FormularioDetails({
           </div>
         </div>
       </DrawerContent>
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Conferma eliminazione</DialogTitle>
-            <DialogDescription>
-              Sei sicuro di voler eliminare questo formulario? Questa azione non
-              è reversibile.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setDeleteDialogOpen(false)}
-            >
-              Annulla
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={async () => {
-                try {
-                  // Get the formulario ID
-                  const formularioId = formulario?.id;
-                  if (!formularioId) {
-                    console.error("No formulario ID available");
-                    toast.error("ID formulario non disponibile");
-                    return;
-                  }
-
-                  // First, fetch the uid using the formulario ID
-                  const supabase = createBrowserClient(
-                    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-                    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-                  );
-                  const { data, error } = await supabase
-                    .from("formulari")
-                    .select("uid")
-                    .eq("id", formularioId)
-                    .single();
-
-                  if (error || !data) {
-                    console.error("Error fetching formulario uid:", error);
-                    toast.error("Errore nel recupero dei dati del formulario");
-                    return;
-                  }
-
-                  const uid = data.uid;
-
-                  // Make the API call to delete the formulario
-                  const response = await fetch("/api/delete-formulario", {
-                    method: "POST",
-                    headers: {
-                      "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({
-                      uid_array: [uid],
-                    }),
-                  });
-
-                  if (!response.ok) {
-                    throw new Error(
-                      `API call failed with status: ${response.status}`
-                    );
-                  }
-
-                  console.log("Formulario deleted successfully:", formularioId);
-
-                  // Close the dialog and drawer
-                  setDeleteDialogOpen(false);
-                  onOpenChange(false);
-
-                  // Refresh the data table
-                  onRefresh?.();
-
-                  // Show a success toast notification
-                  toast.success("Formulario eliminato con successo");
-                } catch (error) {
-                  console.error("Error deleting formulario:", error);
-                  // Show an error toast notification
-                  toast.error("Errore durante l'eliminazione del formulario");
-                }
-              }}
-            >
-              Elimina
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Use the reusable DeletionDialog component */}
+      <DeletionDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        formulariToDelete={formularioToDelete}
+        onDeleteSuccess={handleDeleteSuccess}
+      />
+      
+      {/* PEC Sending Dialog */}
+      <InvioPecDialog
+        open={invioPecDialogOpen}
+        onOpenChange={setInvioPecDialogOpen}
+        formulariToSend={formularioToSend}
+        onSendSuccess={handleSendPecSuccess}
+      />
     </Drawer>
   );
 }

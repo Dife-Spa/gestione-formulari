@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import { ColumnDef, TableMeta } from "@tanstack/react-table";
 // Update the imports at the top to include Tooltip components
 import {
@@ -8,6 +9,10 @@ import {
   FileText,
   Ban,
   Calendar,
+  CheckCircle,
+  XCircle,
+  Mail,
+  Trash,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -30,6 +35,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { toast } from "sonner";
+import { DeletionDialog } from "@/components/formulari/deletion-dialog";
+import { InvioPecDialog } from "@/components/formulari/invio-pec-dialog";
 
 /**
  * Badge component to display status with appropriate colors
@@ -372,199 +379,202 @@ export const columns: ColumnDef<FormularioUI>[] = [
     },
   },
   {
-    id: "actions",
-    cell: ({ row, table }) => {
+    id: "invio_pec",
+    header: ({ column }) => {
+      return (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          Invio PEC
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      );
+    },
+    cell: ({ row }) => {
       const formulario = row.original;
-      const meta = table.options.meta as TableMeta<FormularioUI>;
+      const hasRisultatiInvioPec = formulario.dati_invio_pec && 
+        Object.keys(formulario.dati_invio_pec).length > 0;
 
       return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
-              <span className="sr-only">Apri menu</span>
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuSub>
-              <DropdownMenuSubTrigger>Copia</DropdownMenuSubTrigger>
-              <DropdownMenuSubContent>
-                <DropdownMenuItem
-                  onClick={() => {
-                    navigator.clipboard.writeText(formulario.codice || "");
-                    toast.success("N° formulario copiato negli appunti");
-                  }}
-                  disabled={!formulario.codice}
-                >
-                  N° formulario
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => {
-                    navigator.clipboard.writeText(
-                      formulario.id_appuntamento?.toString() || ""
-                    );
-                    toast.success("ID appuntamento copiato negli appunti");
-                  }}
-                  disabled={!formulario.id_appuntamento}
-                >
-                  ID appuntamento
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => {
-                    navigator.clipboard.writeText(formulario.produttore || "");
-                    toast.success("Produttore copiato negli appunti");
-                  }}
-                  disabled={
-                    !formulario.produttore ||
-                    formulario.produttore === "non presente"
+        <div className="flex justify-center w-[120px]">
+          {hasRisultatiInvioPec ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <CheckCircle 
+                  className="h-5 w-5 text-green-500 cursor-help" 
+                  aria-hidden="true" 
+                />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>PEC inviata con successo</p>
+              </TooltipContent>
+            </Tooltip>
+          ) : (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <XCircle 
+                  className="h-5 w-5 text-red-500 cursor-help" 
+                  aria-hidden="true" 
+                />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>PEC non ancora inviata</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
+        </div>
+      );
+    },
+  },
+  {
+    id: "actions",
+    enableHiding: false,
+    cell: ({ row, table }) => {
+      const formulario = row.original;
+      const meta = table.options.meta as TableMeta<FormularioUI> | undefined;
+      
+      // Add state for deletion dialog inside the cell component
+      const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
+      const [formularioToDelete, setFormularioToDelete] = React.useState<FormularioUI[]>([]);
+      
+      // Add state for PEC dialog
+      const [invioPecDialogOpen, setInvioPecDialogOpen] = React.useState(false);
+      const [formularioToSend, setFormularioToSend] = React.useState<FormularioUI[]>([]);
+      
+      // Add success handler for deletion
+      const handleDeleteSuccess = () => {
+        setFormularioToDelete([]);
+        if (meta?.handleRefreshData) {
+          meta.handleRefreshData();
+        }
+      };
+      
+      // Add success handler for PEC sending
+      const handleSendPecSuccess = () => {
+        setInvioPecDialogOpen(false);
+        setFormularioToSend([]);
+        if (meta?.handleRefreshData) {
+          meta.handleRefreshData();
+        }
+      };
+      
+      return (
+        <>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="h-8 w-8 p-0">
+                <span className="sr-only">Open menu</span>
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Azioni</DropdownMenuLabel>
+              
+              {/* Copia submenu */}
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>
+                  Copia
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent>
+                  <DropdownMenuItem
+                    onClick={() => navigator.clipboard.writeText(formulario.codice)}
+                  >
+                    N° formulario
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => navigator.clipboard.writeText(formulario.id_appuntamento || '')}
+                  >
+                    ID appuntamento
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => navigator.clipboard.writeText(formulario.produttore)}
+                  >
+                    Produttore
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => navigator.clipboard.writeText(formulario.trasportatore)}
+                  >
+                    Trasportatore
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => navigator.clipboard.writeText(formulario.destinatario)}
+                  >
+                    Destinatario
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => navigator.clipboard.writeText(formulario.intermediario || '')}
+                  >
+                    Intermediario
+                  </DropdownMenuItem>
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+              
+              <DropdownMenuSeparator />
+              
+              {/* Visualizza */}
+              <DropdownMenuItem
+                onClick={() => {
+                  if (meta?.handleFormularioSelect) {
+                    meta.handleFormularioSelect(formulario);
                   }
-                >
-                  Produttore
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => {
-                    navigator.clipboard.writeText(
-                      formulario.destinatario || ""
-                    );
-                    toast.success("Destinatario copiato negli appunti");
-                  }}
-                  disabled={
-                    !formulario.destinatario ||
-                    formulario.destinatario === "non presente"
+                }}
+              >
+                <FileText className="h-4 w-4" />
+                Visualizza
+              </DropdownMenuItem>
+              
+              {/* Invia PEC */}
+              <DropdownMenuItem
+                onClick={() => {
+                  if (formulario) {
+                    setFormularioToSend([formulario]);
+                    setInvioPecDialogOpen(true);
                   }
-                >
-                  Destinatario
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => {
-                    navigator.clipboard.writeText(
-                      formulario.trasportatore || ""
-                    );
-                    toast.success("Trasportatore copiato negli appunti");
-                  }}
-                  disabled={
-                    !formulario.trasportatore ||
-                    formulario.trasportatore === "non presente"
+                }}
+              >
+                <Mail className="h-4 w-4" />
+                Invia PEC
+              </DropdownMenuItem>
+              
+              <DropdownMenuSeparator />
+              
+              {/* Elimina */}
+              <DropdownMenuItem
+                className="text-destructive"
+                onClick={() => {
+                  if (formulario) {
+                    setFormularioToDelete([formulario]);
+                    setDeleteDialogOpen(true);
                   }
-                >
-                  Trasportatore
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => {
-                    navigator.clipboard.writeText(
-                      formulario.intermediario || ""
-                    );
-                    toast.success("Intermediario copiato negli appunti");
-                  }}
-                  disabled={
-                    !formulario.intermediario ||
-                    formulario.intermediario === "non presente"
-                  }
-                >
-                  Intermediario
-                </DropdownMenuItem>
-              </DropdownMenuSubContent>
-            </DropdownMenuSub>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={() => meta?.handleFormularioSelect?.(formulario)}
-            >
-              Visualizza
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={async () => {
-                try {
-                  if (!formulario?.uid) {
-                    toast.error("UID del formulario non disponibile");
-                    return;
-                  }
-
-                  const response = await fetch("/api/send-pec", {
-                    method: "POST",
-                    headers: {
-                      "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({
-                      uid_array: [formulario.uid],
-                    }),
-                  });
-
-                  if (!response.ok) {
-                    throw new Error(`Errore HTTP: ${response.status}`);
-                  }
-
-                  const result = await response.json();
-                  console.log("PEC inviata con successo:", result);
-                  toast.success("PEC inviata con successo");
-                } catch (error) {
-                  console.error("Errore durante l'invio della PEC:", error);
-                  toast.error("Errore durante l'invio della PEC");
-                }
-              }}
-            >
-              Invia PEC
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              className="text-destructive"
-              onClick={async () => {
-                try {
-                  // Get the formulario ID
-                  const formularioId = formulario?.id;
-                  if (!formularioId) {
-                    console.error("No formulario ID available");
-                    toast.error("ID formulario non disponibile");
-                    return;
-                  }
-
-                  // Use the uid directly from the formulario object
-                  const uid = formulario.uid;
-                  if (!uid) {
-                    console.error(
-                      "No UID available for formulario:",
-                      formularioId
-                    );
-                    toast.error("UID formulario non disponibile");
-                    return;
-                  }
-
-                  // Make the API call to delete the formulario
-                  const response = await fetch("/api/delete-formulario", {
-                    method: "POST",
-                    headers: {
-                      "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({
-                      uid_array: [uid],
-                    }),
-                  });
-
-                  if (!response.ok) {
-                    throw new Error(
-                      `API call failed with status: ${response.status}`
-                    );
-                  }
-
-                  console.log("Formulario deleted successfully:", formularioId);
-
-                  // Refresh the data table using the meta function
-                  if (meta?.handleRefreshData) {
-                    meta.handleRefreshData();
-                  }
-
-                  // Show a success toast notification
-                  toast.success("Formulario eliminato con successo");
-                } catch (error) {
-                  console.error("Error deleting formulario:", error);
-                  // Show an error toast notification
-                  toast.error("Errore durante l'eliminazione del formulario");
-                }
-              }}
-            >
-              Elimina
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+                }}
+              >
+                <Trash className="h-4 w-4 text-destructive" />
+                Elimina
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          
+          {/* Add the dialog components */}
+          <DeletionDialog
+            open={deleteDialogOpen}
+            onOpenChange={setDeleteDialogOpen}
+            formulariToDelete={formularioToDelete}
+            onDeleteSuccess={handleDeleteSuccess}
+          />
+          
+          <InvioPecDialog
+            open={invioPecDialogOpen}
+            onOpenChange={setInvioPecDialogOpen}
+            formulariToSend={formularioToSend}
+            onSendSuccess={handleSendPecSuccess}
+          />
+        </>
       );
     },
   },
 ];
+
+
+
+
