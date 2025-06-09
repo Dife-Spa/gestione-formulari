@@ -183,7 +183,7 @@ export default function Page() {
           <SidebarInset>
             <div className="flex flex-1 flex-col gap-4 p-4">
               <div className="grid auto-rows-min gap-4 md:grid-cols-3">
-                <h1>Hello world</h1>
+                <h1>Hello world 2</h1>
                 {/* Total Formulari Card */}
                 <StatsCard
                   title="Totale Formulari"
