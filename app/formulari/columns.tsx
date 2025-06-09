@@ -303,10 +303,10 @@ export const columns: ColumnDef<FormularioUI>[] = [
 
       // Badge colors for different document types
       const badgeStyles = {
-        scontrino: "bg-purple-300 text-purple-800",
-        file_input: "bg-blue-300 text-blue-800",
-        formulario: "bg-green-300 text-green-800",
-        buono_intervento: "bg-amber-300 text-amber-800",
+        scontrino: "bg-purple-500 text-white",
+        file_input: "bg-blue-500 text-white",
+        formulario: "bg-green-500 text-white",
+        buono_intervento: "bg-amber-500 text-white",
       };
 
       // Document type letters

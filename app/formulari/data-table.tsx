@@ -17,7 +17,18 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 // Update the imports at the top of the file to include the new icons
-import { CalendarIcon, Search, ChevronDown, Trash2, Mail } from "lucide-react";
+import {
+  CalendarIcon,
+  Search,
+  ChevronDown,
+  Trash2,
+  Mail,
+  Plus,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+} from "lucide-react";
 
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -155,6 +166,46 @@ export function DataTable<TData, TValue>({
   // Handle page navigation
   const goToPage = (page: number) => {
     router.push(`?${createQueryString({ page })}`);
+  };
+
+  // Handle page size change
+  const handlePageSizeChange = (size: number) => {
+    router.push(`?${createQueryString({ pageSize: size, page: 1 })}`);
+  };
+
+  // Add state for direct page navigation
+  const [pageInput, setPageInput] = React.useState<string>(
+    currentPage.toString()
+  );
+
+  // Update pageInput when currentPage changes
+  React.useEffect(() => {
+    setPageInput(currentPage.toString());
+  }, [currentPage]);
+
+  const handlePageInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPageInput(e.target.value);
+  };
+
+  const handlePageInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      const page = parseInt(pageInput);
+      if (!isNaN(page) && page >= 1 && page <= totalPages) {
+        goToPage(page);
+      } else {
+        setPageInput(currentPage.toString());
+      }
+    }
+  };
+
+  // Function to go to first page
+  const goToFirstPage = () => {
+    goToPage(1);
+  };
+
+  // Function to go to last page
+  const goToLastPage = () => {
+    goToPage(totalPages);
   };
 
   // Handle search with debouncing
@@ -418,13 +469,21 @@ export function DataTable<TData, TValue>({
 						</Button> */}
           </div>
         ) : (
-          // Empty div to maintain layout when no rows are selected
-          <div className="ml-auto"></div>
+          <div className="ml-auto">
+            <Button
+              onClick={() => {
+                router.push("/formulari/aggiungi");
+              }}
+            >
+              <Plus className="h-4 w-4" />
+              Nuovo formulario
+            </Button>
+          </div>
         )}
       </div>
-      <div className="rounded-md border">
+      <div className="rounded-md border h-[calc(100vh-350px)] overflow-auto">
         <Table>
-          <TableHeader>
+          <TableHeader className="sticky top-0 bg-background z-10">
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => {
@@ -473,29 +532,85 @@ export function DataTable<TData, TValue>({
         </Table>
       </div>
       <div className="flex items-center justify-between space-x-2 py-4">
-        <div className="text-sm text-muted-foreground">
-          Mostrando {data.length} di {totalItems} risultati
+        <div className="flex items-center space-x-4">
+          <div className="text-sm text-muted-foreground">
+            Mostrando {data.length} di {totalItems} risultati
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="h-8 px-2">
+                {pageSize} righe <ChevronDown className="ml-1 h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              <DropdownMenuRadioGroup
+                value={pageSize.toString()}
+                onValueChange={(value) => handlePageSizeChange(parseInt(value))}
+              >
+                <DropdownMenuRadioItem value="15">
+                  15 righe
+                </DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="30">
+                  30 righe
+                </DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="50">
+                  50 righe
+                </DropdownMenuRadioItem>
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
         <div className="flex items-center space-x-6">
           <div className="text-sm text-muted-foreground">
             Pagina {currentPage} di {totalPages}
           </div>
-          <div className="space-x-2">
+          <div className="flex items-center space-x-2">
             <Button
               variant="outline"
-              size="sm"
-              onClick={() => goToPage(currentPage - 1)}
+              size="icon"
+              onClick={goToFirstPage}
               disabled={currentPage <= 1}
+              title="Prima pagina"
             >
-              Precedente
+              <ChevronsLeft className="h-4 w-4" />
             </Button>
             <Button
               variant="outline"
-              size="sm"
+              size="icon"
+              onClick={() => goToPage(currentPage - 1)}
+              disabled={currentPage <= 1}
+              title="Pagina precedente"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <div className="flex items-center space-x-1">
+              <Input
+                type="number"
+                min={1}
+                max={totalPages}
+                value={pageInput}
+                onChange={handlePageInputChange}
+                onKeyDown={handlePageInputKeyDown}
+                className="h-8 w-16 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              />
+            </div>
+            <Button
+              variant="outline"
+              size="icon"
               onClick={() => goToPage(currentPage + 1)}
               disabled={currentPage >= totalPages}
+              title="Pagina successiva"
             >
-              Successiva
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={goToLastPage}
+              disabled={currentPage >= totalPages}
+              title="Ultima pagina"
+            >
+              <ChevronsRight className="h-4 w-4" />
             </Button>
           </div>
         </div>

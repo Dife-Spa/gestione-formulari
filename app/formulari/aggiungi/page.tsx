@@ -1,14 +1,12 @@
-"use client"
+"use client";
 
-import { AppSidebar } from "@/components/sidebar/app-sidebar"
-import { SiteHeader } from "@/components/sidebar/site-header"
-import { FileUpload } from "@/components/formulari/aggiungi/file-upload"
-import {
-  SidebarInset,
-  SidebarProvider,
-} from "@/components/ui/sidebar"
+import { AppSidebar } from "@/components/sidebar/app-sidebar";
+import { SiteHeader } from "@/components/sidebar/site-header";
+import { FileUpload } from "@/components/formulari/aggiungi/file-upload";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 
-export const description = "Aggiungi un nuovo formulario."
+// Remove this line - it's causing the TypeScript error
+// export const description = "Aggiungi un nuovo formulario."
 
 export default function AggiungiFormularioPage() {
   return (
@@ -20,6 +18,11 @@ export default function AggiungiFormularioPage() {
           <SidebarInset>
             <div className="flex flex-1 flex-col gap-4 p-4">
               <h1 className="text-2xl font-bold">Aggiungi Formulario</h1>
+              <p className="text-muted-foreground max-w-[50%]">
+                Carica un nuovo formulario di identificazione dei rifiuti in
+                formato PDF. Il sistema elaborerà automaticamente il documento
+                per estrarre le informazioni necessarie.
+              </p>
               <div className="bg-muted/50 p-6 rounded-xl">
                 <div className="space-y-4">
                   <div>
@@ -30,7 +33,7 @@ export default function AggiungiFormularioPage() {
                       <FileUpload
                         onFileSelect={(file) => {
                           if (file) {
-                            console.log('Selected file:', file.name)
+                            console.log("Selected file:", file.name);
                           }
                         }}
                         accept=".pdf"
@@ -45,5 +48,5 @@ export default function AggiungiFormularioPage() {
         </div>
       </SidebarProvider>
     </div>
-  )
+  );
 }
