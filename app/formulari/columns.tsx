@@ -145,7 +145,7 @@ export const columns: ColumnDef<FormularioUI>[] = [
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
         >
-          Data emissione
+          Data movimento
           <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       );

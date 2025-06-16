@@ -65,6 +65,7 @@ export default async function FormulariPage({
 }
 
 // Create a new component to handle data fetching inside the Suspense boundary
+// Inside FormulariDataTable component, update the getFormulari call
 async function FormulariDataTable({ searchParams }: { searchParams: any }) {
   // Get pageSize from URL params or default to 15
   const pageSize = Number(searchParams.pageSize) || 15;
@@ -82,6 +83,8 @@ async function FormulariDataTable({ searchParams }: { searchParams: any }) {
     documents: (searchParams.documents as string) || "",
     pecStatus: (searchParams.pecStatus as string) || "",
     searchColumn: (searchParams.searchColumn as string) || "",
+    daGestireStatus: (searchParams.daGestireStatus as string) || "",
+    month: (searchParams.month as string) || "", // Add this line
   });
 
   return (

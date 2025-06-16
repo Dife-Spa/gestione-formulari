@@ -70,6 +70,9 @@ import { PecFilter } from "@/components/formulari/pec-filter";
 // Add import for InvioPecDialog
 import { DeletionDialog } from "@/components/formulari/deletion-dialog";
 import { InvioPecDialog } from "@/components/formulari/invio-pec-dialog";
+// Add import for the new filter component
+import { DaGestireFilter } from "@/components/formulari/da-gestire-filter";
+import { MonthFilter } from "@/components/formulari/month-filter";
 
 /**
  * Interface for the DateRange type
@@ -366,6 +369,36 @@ const handleSendPecSuccess = () => {
   handleRefreshData();
 };
 
+// Add state for da gestire filter
+const currentDaGestireStatus = searchParams?.get("daGestireStatus") || "";
+const [selectedDaGestireStatus, setSelectedDaGestireStatus] =
+  React.useState<string>(currentDaGestireStatus);
+
+// Add handler for da gestire filter change
+const handleDaGestireStatusChange = (daGestireStatus: string) => {
+  setSelectedDaGestireStatus(daGestireStatus);
+  const params: Record<string, string | number | null> = {
+    page: 1,
+    daGestireStatus: daGestireStatus || null,
+  };
+  router.push(`?${createQueryString(params)}`);
+};
+
+// Add state for month filter (add this after the da gestire filter state)
+const currentMonth = searchParams?.get("month") || "";
+const [selectedMonth, setSelectedMonth] = React.useState<string>(currentMonth);
+
+// Add handler for month filter change (add this after the da gestire filter handler)
+const handleMonthChange = (month: string) => {
+	setSelectedMonth(month);
+	const params: Record<string, string | number | null> = {
+		page: 1,
+		month: month || null,
+	};
+	router.push(`?${createQueryString(params)}`);
+};
+
+
   // Function to execute the actual deletion
   const executeDelete = async () => {
     try {
@@ -413,17 +446,37 @@ const handleSendPecSuccess = () => {
   return (
     // Remove TooltipProvider wrapper
     <div className="w-full">
-      <div className="flex items-center py-4">
-        <div className="flex gap-3">
-          <Input
-            placeholder="Cerca formulari..."
-            value={searchValue}
-            onChange={(event) => setSearchValue(event.target.value)}
-            className="max-w-sm"
-          />
-          {/* Filter section */}
-          <div className="flex items-center gap-2 pb-4">
-            <DateRangePicker
+      <div className="flex items-end py-4">
+        <div className="flex flex-col gap-3">
+        <div className="flex items-center gap-2">
+          <div className="flex">
+            <Input
+              placeholder="Cerca formulari..."
+              value={searchValue}
+              onChange={(event) => setSearchValue(event.target.value)}
+              className="max-w-sm rounded-r-none"
+            />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="rounded-l-none border-l-0 px-2">
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Cerca in colonna</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuRadioGroup value={searchColumn || "numeroFir"} onValueChange={handleSearchColumnChange}>
+                  <DropdownMenuRadioItem value="numeroFir">N° formulario</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="produttore">Produttore</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="trasportatore">Trasportatore</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="destinatario">Destinatario</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="intermediario">Intermediario</DropdownMenuRadioItem>
+                </DropdownMenuRadioGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
+            {/* <DateRangePicker
               dateRange={dateRange}
               onDateRangeChange={handleDateRangeChange}
               onClearDateRange={handleClearDateRange}
@@ -431,6 +484,18 @@ const handleSendPecSuccess = () => {
             <DocumentsFilter
               selectedDocuments={selectedDocuments}
               onChange={handleDocumentsChange}
+            /> */}
+
+          </div>
+          {/* Add the new filter below the existing filters */}
+          <div className="flex items-center gap-2 mt-2">
+            <DaGestireFilter
+              selectedDaGestireStatus={selectedDaGestireStatus}
+              onChange={handleDaGestireStatusChange}
+            />
+            <MonthFilter
+              selectedMonth={selectedMonth}
+              onChange={handleMonthChange}
             />
             <PecFilter
               selectedPecStatus={selectedPecStatus}
@@ -718,6 +783,11 @@ function DateRangePicker({
     </div>
   );
 }
+
+
+
+
+
 
 
 

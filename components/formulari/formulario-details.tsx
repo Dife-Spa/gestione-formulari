@@ -399,10 +399,35 @@ export function FormularioDetails({
     completato: "Completato",
   };
 
+  // Add this new handler to reset editing states when drawer closes
+  const handleDrawerOpenChange = (isOpen: boolean) => {
+    if (!isOpen) {
+      // Reset all editing states and revert values when drawer closes
+      if (editingCodice) {
+        setCodiceValue(originalCodiceValue);
+        setEditingCodice(false);
+      }
+      if (editingIdAppuntamento) {
+        setIdAppuntamentoValue(originalIdAppuntamentoValue);
+        setEditingIdAppuntamento(false);
+      }
+      if (editingPecDestinatario) {
+        setPecDestinatarioValue(originalPecDestinatarioValue);
+        setEditingPecDestinatario(false);
+      }
+      if (editingPecOptions) {
+        setRiceveFormularioValue(originalRiceveFormularioValue);
+        setRiceveScontrinoValue(originalRiceveScontrinoValue);
+        setEditingPecOptions(false);
+      }
+    }
+    onOpenChange(isOpen);
+  };
+
   return (
-    <Drawer open={open} onOpenChange={onOpenChange} direction="bottom">
+    <Drawer open={open} onOpenChange={handleDrawerOpenChange} direction="bottom">
       <DrawerContent className="">
-        <div className="mx-auto w-full max-w-[80%]">
+        <div className="mx-auto w-full max-w-[80%] pb-12">
           <DrawerHeader className="pb-2 flex flex-row justify-between items-end">
             <div>
               <DrawerTitle className="text-xl flex items-center gap-2">
@@ -550,24 +575,26 @@ export function FormularioDetails({
                               <X className="h-4 w-4" />
                             </Button>
                           )}
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6"
-                            onClick={() => {
-                              if (editingIdAppuntamento) {
-                                handleSaveIdAppuntamento();
-                              } else {
-                                setEditingIdAppuntamento(true);
-                              }
-                            }}
-                          >
-                            {editingIdAppuntamento ? (
-                              <Check className="h-4 w-4" />
-                            ) : (
-                              <Pencil className="h-4 w-4" />
-                            )}
-                          </Button>
+                          {(!formulario.id_appuntamento || formulario.id_appuntamento === "") && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              onClick={() => {
+                                if (editingIdAppuntamento) {
+                                  handleSaveIdAppuntamento();
+                                } else {
+                                  setEditingIdAppuntamento(true);
+                                }
+                              }}
+                            >
+                              {editingIdAppuntamento ? (
+                                <Check className="h-4 w-4" />
+                              ) : (
+                                <Pencil className="h-4 w-4" />
+                              )}
+                            </Button>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -647,9 +674,9 @@ export function FormularioDetails({
                       <span className="text-xs font-medium text-muted-foreground">
                         Codice EER
                       </span>
-                      <span className="text-xs">
+                      <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-200">
                         {caratteristicheRifiuto.eer || "Non specificato"}
-                      </span>
+                      </Badge>
                     </div>
 
                     {/* Quantità */}
@@ -658,11 +685,18 @@ export function FormularioDetails({
                         Quantità
                       </span>
                       <span className="text-xs">
-                        {datiAppuntamento?.quantitaRealeKg ||
-                          caratteristicheRifiuto.quantita ||
-                          formulario.quantita ||
-                          "-"}{" "}
-                        {caratteristicheRifiuto.unita_misura || "kg"}
+                        {(() => {
+                          const quantity = datiAppuntamento?.quantitaRealeKg ||
+                            caratteristicheRifiuto.quantita ||
+                            formulario.quantita;
+                          if (quantity && quantity !== "non presente" && quantity !== "-") {
+                            const numValue = parseFloat(quantity.toString());
+                            if (!isNaN(numValue)) {
+                              return `${numValue.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kg`;
+                            }
+                          }
+                          return quantity || "-";
+                        })()}
                       </span>
                     </div>
 
@@ -671,10 +705,10 @@ export function FormularioDetails({
                       <span className="text-xs font-medium text-muted-foreground">
                         Stato Fisico
                       </span>
-                      <span className="text-xs">
+                      <Badge className="bg-green-100 text-green-800 hover:bg-green-200">
                         {caratteristicheRifiuto.stato_fisico ||
                           "Non specificato"}
-                      </span>
+                      </Badge>
                     </div>
 
                     {/* Aspetto */}
@@ -749,9 +783,9 @@ export function FormularioDetails({
                       <span className="text-xs font-medium text-muted-foreground">
                         Targa Automezzo
                       </span>
-                      <span className="text-xs">
+                      <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-200">
                         {trasporto.targa_automezzo || "Non specificato"}
-                      </span>
+                      </Badge>
                     </div>
 
                     {/* Targa Rimorchio */}
@@ -759,9 +793,9 @@ export function FormularioDetails({
                       <span className="text-xs font-medium text-muted-foreground">
                         Targa Rimorchio
                       </span>
-                      <span className="text-xs">
-                        {trasporto.targa_rimorchio || "Non presente"}
-                      </span>
+                      <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-200">
+                        {trasporto.targa_rimorchio === "non presente" ? "Non presente" : (trasporto.targa_rimorchio || "Non presente")}
+                      </Badge>
                     </div>
                   </div>
 
@@ -797,7 +831,9 @@ export function FormularioDetails({
                         Carico Accettato
                       </span>
                       <span className="text-xs">
-                        {destinazioneInfo.carico_accettato || "Non specificato"}
+                        {destinazioneInfo.carico_accettato 
+                          ? destinazioneInfo.carico_accettato.charAt(0).toUpperCase() + destinazioneInfo.carico_accettato.slice(1).toLowerCase()
+                          : "Non specificato"}
                       </span>
                     </div>
 
@@ -807,8 +843,16 @@ export function FormularioDetails({
                         Quantità Accettata
                       </span>
                       <span className="text-xs">
-                        {destinazioneInfo.quantita_accettata ||
-                          "Non specificato"}
+                        {(() => {
+                          const quantity = destinazioneInfo.quantita_accettata;
+                          if (quantity && quantity !== "non presente") {
+                            const numValue = parseFloat(quantity.toString());
+                            if (!isNaN(numValue)) {
+                              return `${numValue.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kg`;
+                            }
+                          }
+                          return quantity || "Non specificato";
+                        })()} 
                       </span>
                     </div>
 
@@ -818,8 +862,19 @@ export function FormularioDetails({
                         Quantità Respinta
                       </span>
                       <span className="text-xs">
-                        {destinazioneInfo.quantita_respinta ||
-                          "Non specificato"}
+                        {(() => {
+                          const quantity = destinazioneInfo.quantita_respinta;
+                          if (quantity === "non presente") {
+                            return "Non presente";
+                          }
+                          if (quantity) {
+                            const numValue = parseFloat(quantity.toString());
+                            if (!isNaN(numValue)) {
+                              return `${numValue.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kg`;
+                            }
+                          }
+                          return "Non specificato";
+                        })()} 
                       </span>
                     </div>
 
@@ -839,7 +894,7 @@ export function FormularioDetails({
                         Motivazioni
                       </span>
                       <span className="text-xs">
-                        {destinazioneInfo.motivazioni || "Non specificato"}
+                        {destinazioneInfo.motivazioni === "non presente" ? "Non presente" : (destinazioneInfo.motivazioni || "Non specificato")}
                       </span>
                     </div>
                   </div>

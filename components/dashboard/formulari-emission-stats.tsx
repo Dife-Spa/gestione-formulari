@@ -187,7 +187,7 @@ export function FormulariEmissionStats() {
             </CardDescription>
           </div>
           {!isLoading && !error && (
-            <div className="flex flex-col gap-2">
+            <div className="flex gap-2">
               <Badge 
                 variant="outline" 
                 className="bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"

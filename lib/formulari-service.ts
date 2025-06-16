@@ -28,7 +28,7 @@ function transformFormularioForUI(dbRecord: FormularioFromDB): FormularioUI {
 		id: dbRecord.id.toString(),
 		uid: dbRecord.uid,  // Add this line to include the uid
 		codice: dbRecord.numeroFir || `FIR-${dbRecord.id}`,
-		data: dbRecord.data_emissione || dbRecord.created_at,
+		data: dbRecord.data_movimento || dbRecord.created_at,
 		produttore: dbRecord.produttore || 'N/A',
 		trasportatore: dbRecord.trasportatore || 'N/A',
 		destinatario: dbRecord.destinatario || 'N/A',
@@ -60,7 +60,9 @@ export async function getFormulari({
 	sortOrder = 'desc',
 	documents = '',
 	pecStatus = '',
-	searchColumn = '' // Add this parameter
+	searchColumn = '',
+	daGestireStatus = '',
+	month = '' // Add this parameter
 }: {
 	page?: number
 	pageSize?: number
@@ -72,7 +74,9 @@ export async function getFormulari({
 	sortOrder?: 'asc' | 'desc'
 	documents?: string
 	pecStatus?: string
-	searchColumn?: string // Add this parameter
+	searchColumn?: string
+	daGestireStatus?: string
+	month?: string // Add this parameter
 } = {}) {
 	const supabase = await createServerSupabaseClient()
 	
@@ -155,6 +159,33 @@ export async function getFormulari({
 			}
 		}
 
+		// Add Da Gestire filter
+		if (daGestireStatus === 'da_gestire') {
+			// Filter for items where idTrasportatore equals "70577" and idProduttore is not "70577"
+			// Using JSON operators to access fields within dati_appuntamento JSONB column
+			query = query
+				.eq('dati_appuntamento->>idTrasportatore', '70577')
+				.neq('dati_appuntamento->>idProduttore', '70577')
+		}
+		
+
+		// Add Month filter (after the Da Gestire filter)
+		if (month) {
+			// Extract year and month from the parameter (format: YYYY-MM)
+			const [year, monthNum] = month.split('-')
+			
+			// Calculate the start and end dates for the selected month
+			const startDate = `${year}-${monthNum}-01` // First day of month
+			
+			// Calculate last day of month
+			const lastDay = new Date(parseInt(year), parseInt(monthNum), 0).getDate()
+			const endDate = `${year}-${monthNum}-${lastDay}` // Last day of month
+			
+			// Filter by data_movimento within the month range
+			query = query.gte('data_movimento', startDate)
+				.lte('data_movimento', endDate)
+		}
+
 		// Apply pagination
 		const from = (page - 1) * pageSize
 		const to = from + pageSize - 1
@@ -162,14 +193,14 @@ export async function getFormulari({
 
 		// Apply date range filter
 		if (dateFrom) {
-		  query = query.gte('data_emissione', dateFrom)
+		  query = query.gte('data_movimento', dateFrom)
 		  
 		  if (dateTo) {
 		    // Add one day to include the end date in the range (since dates are stored as YYYY-MM-DD)
 		    const nextDay = new Date(dateTo)
 		    nextDay.setDate(nextDay.getDate() + 1)
 		    const formattedNextDay = nextDay.toISOString().split('T')[0]
-		    query = query.lt('data_emissione', formattedNextDay)
+		    query = query.lt('data_movimento', formattedNextDay)
 		  }
 		}
 
