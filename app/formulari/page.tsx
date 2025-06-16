@@ -16,9 +16,9 @@ import Loading, { FormulariTableSkeleton } from "./loading";
 export default async function FormulariPage({
   searchParams,
 }: {
-  searchParams: { [key: string]: string | string[] | undefined };
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
-  // Await searchParams before accessing its properties
+  // Extract search parameters for server-side filtering
   const params = await searchParams;
   const page = Number(params.page) || 1;
   const search = (params.search as string) || "";
@@ -67,27 +67,24 @@ export default async function FormulariPage({
 // Create a new component to handle data fetching inside the Suspense boundary
 // Inside FormulariDataTable component, update the getFormulari call
 async function FormulariDataTable({ searchParams }: { searchParams: any }) {
-  // Await searchParams before accessing its properties
-  const params = await searchParams;
-  
   // Get pageSize from URL params or default to 15
-  const pageSize = Number(params.pageSize) || 15;
+  const pageSize = Number(searchParams.pageSize) || 15;
 
   // Fetch data server-side
   const formulariData = await getFormulari({
-    page: Number(params.page) || 1,
+    page: Number(searchParams.page) || 1,
     pageSize: pageSize,
-    search: (params.search as string) || "",
-    status: (params.status as string) || "",
-    dateFrom: (params.dateFrom as string) || "",
-    dateTo: (params.dateTo as string) || "",
-    sortBy: (params.sortBy as string) || "created_at",
-    sortOrder: (params.sortOrder as "asc" | "desc") || "desc",
-    documents: (params.documents as string) || "",
-    pecStatus: (params.pecStatus as string) || "",
-    searchColumn: (params.searchColumn as string) || "",
-    daGestireStatus: (params.daGestireStatus as string) || "",
-    month: (params.month as string) || "", // Add this line
+    search: (searchParams.search as string) || "",
+    status: (searchParams.status as string) || "",
+    dateFrom: (searchParams.dateFrom as string) || "",
+    dateTo: (searchParams.dateTo as string) || "",
+    sortBy: (searchParams.sortBy as string) || "created_at",
+    sortOrder: (searchParams.sortOrder as "asc" | "desc") || "desc",
+    documents: (searchParams.documents as string) || "",
+    pecStatus: (searchParams.pecStatus as string) || "",
+    searchColumn: (searchParams.searchColumn as string) || "",
+    daGestireStatus: (searchParams.daGestireStatus as string) || "",
+    month: (searchParams.month as string) || "", // Add this line
   });
 
   return (
