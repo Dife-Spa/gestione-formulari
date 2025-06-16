@@ -28,7 +28,7 @@ jobs:
         context: .
         file: ./Dockerfile
         push: true
-        tags: Dife-Spa/gestione-formulari:latest
+        tags: ${{ secrets.DOCKER_USERNAME }}/gestione-formulari:latest
         platforms: linux/amd64,linux/arm64
         build-args: |
           NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
