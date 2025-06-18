@@ -393,12 +393,14 @@ export const columns: ColumnDef<FormularioUI>[] = [
     },
     cell: ({ row }) => {
       const formulario = row.original;
-      const hasRisultatiInvioPec = formulario.dati_invio_pec && 
-        Object.keys(formulario.dati_invio_pec).length > 0;
+      // Check if the stato is 'completato' which indicates PEC was sent
+      // This is more reliable since the transformFormularioForUI function
+      // sets stato to 'completato' when risultati_invio_pec exists
+      const pecInviata = formulario.stato === 'completato';
 
       return (
         <div className="flex justify-center w-[120px]">
-          {hasRisultatiInvioPec ? (
+          {pecInviata ? (
             <Tooltip>
               <TooltipTrigger asChild>
                 <CheckCircle 

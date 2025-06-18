@@ -147,14 +147,12 @@ export async function getFormulari({
 		if (pecStatus) {
 			switch (pecStatus) {
 				case 'inviata':
-					// PEC sent: risultati_invio_pec is not null AND contains status_code = 200
-					query = query
-						.not('risultati_invio_pec', 'is', null)
-						.eq('risultati_invio_pec->status_code', 200)
+					// PEC sent: risultati_invio_pec is not null
+					query = query.not('risultati_invio_pec', 'is', null)
 					break
 				case 'non_inviata':
-					// PEC not sent: risultati_invio_pec is null OR status_code != 200
-					query = query.or('risultati_invio_pec.is.null,risultati_invio_pec->status_code.neq.200')
+					// PEC not sent: risultati_invio_pec is null
+					query = query.is('risultati_invio_pec', null)
 					break
 			}
 		}
